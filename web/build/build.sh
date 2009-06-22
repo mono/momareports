@@ -1,0 +1,1 @@
+gmcs -r:bin/MySql.Data.dll -r:System.Data.dll -r:System.Configuration.dll -r:System.Web.dll -r:System.Web.Mvc.dll -r:System.Web.Routing.dll -r:System.Data.DataSetExtensions.dll -r:System.Drawing.dll -target:library -out:bin/Moma.Web.dll $(find -name \*.cs)

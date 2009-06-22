@@ -1,0 +1,231 @@
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`members`;
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`reports_members`;
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`reports_pinvoke`;
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`reports_counts`;
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`reports_master`;
+@STATEMENT
+CREATE TABLE  `moma`.`members` (
+  `member_id` int(11) NOT NULL AUTO_INCREMENT,
+  `version_id` int(11) NOT NULL,
+  `name` varchar(512) COLLATE utf8_bin NOT NULL,
+  `is_todo` bit(1) NOT NULL,
+  `is_missing` bit(1) NOT NULL,
+  `is_niex` bit(1) NOT NULL,
+  `is_fixed` bit(1) NOT NULL,
+  `fixed_in_version` varchar(25) COLLATE utf8_bin DEFAULT NULL,
+  `todo_comment` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  PRIMARY KEY (`member_id`),
+  KEY `idx_name` (`name`(255)),
+  KEY `idx_fixed` (`is_fixed`),
+  KEY `idx_missing` (`is_missing`),
+  KEY `idx_niex` (`is_niex`),
+  KEY `idx_todo` (`is_todo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+@STATEMENT
+CREATE TABLE  `moma`.`reports_master` (
+  `report_id` int(11) NOT NULL AUTO_INCREMENT,
+  `submit_date` datetime NOT NULL,
+  `IP` varchar(16) COLLATE utf8_bin NOT NULL,
+  `definitions` varchar(25) COLLATE utf8_bin DEFAULT NULL,
+  `reported_by` TEXT COLLATE utf8_bin DEFAULT NULL,
+  `email` TEXT COLLATE utf8_bin DEFAULT NULL,
+  `organization` TEXT COLLATE utf8_bin DEFAULT NULL,
+  `homepage` TEXT COLLATE utf8_bin DEFAULT NULL,
+  `comment` TEXT COLLATE utf8_bin DEFAULT NULL,
+  `guid` varchar(50) COLLATE utf8_bin NOT NULL,
+  `totalpinvokes` INT(11) NOT NULL,
+  `haswpf` INT(1) NOT NULL,
+  PRIMARY KEY (`report_id`),
+  UNIQUE KEY `idx_master_guid` (`guid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+@STATEMENT
+CREATE TABLE  `moma`.`reports_members` (
+  `report_id` int(11) NOT NULL,
+  `member_id` int(11) NOT NULL,
+  `count` int(11) NOT NULL,
+  `is_missing` bit(1) NOT NULL,
+  `is_todo` bit(1) NOT NULL,
+  `is_niex` bit(1) NOT NULL,
+  PRIMARY KEY (`report_id`,`member_id`) USING BTREE,
+  KEY `idx_rm_member_id` (`member_id`),
+  CONSTRAINT `fk_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports_master` (`report_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+@STATEMENT
+CREATE TABLE  `moma`.`reports_pinvoke` (
+  `pinvoke_id` int(11) NOT NULL AUTO_INCREMENT,
+  `report_id` int(11) NOT NULL,
+  `library_name` varchar(40) COLLATE utf8_bin NOT NULL,
+  `function_name` varchar(80) COLLATE utf8_bin NOT NULL,
+  `count` int(11) NOT NULL,
+  PRIMARY KEY (`pinvoke_id`),
+  UNIQUE KEY (`report_id`,`library_name`,`function_name`),
+  KEY `idx_pinvoke_lname` (`library_name`),
+  KEY `idx_pinvoke_fname` (`function_name`),
+  CONSTRAINT `fk_report_id_pinvoke` FOREIGN KEY (`report_id`) REFERENCES `reports_master` (`report_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+@STATEMENT
+DROP TABLE IF EXISTS `moma`.`versions`;
+CREATE TABLE  `moma`.`versions` (
+  `version_id` int(11) NOT NULL AUTO_INCREMENT,
+  `version_name` varchar(25) COLLATE utf8_bin NOT NULL,
+  `info_date` datetime NOT NULL,
+  PRIMARY KEY (`version_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+@STATEMENT
+;
+CREATE TABLE `moma`.`reports_counts` (
+  `report_id` INT(11)  NOT NULL,
+  `TotalMissing` INT(11)  NOT NULL,
+  `TotalTodo` INT(11)  NOT NULL,
+  `TotalNiex` INT(11)  NOT NULL,
+  `TotalPInvoke` INT(11)  NOT NULL,
+  `TotalProblems` int(11) NOT NULL,
+  PRIMARY KEY (`report_id`),
+  CONSTRAINT `fk_report_id_count` FOREIGN KEY `fk_report_id_count` (`report_id`)
+    REFERENCES `reports_master` (`report_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `insert_member`;
+CREATE PROCEDURE `insert_member`(version_id int, name
+varchar(512), is_todo bit, is_missing bit, is_niex bit, is_fixed bit,
+fixed_in_version varchar(25), todo_comment varchar(256), out id int)
+BEGIN
+DECLARE memberid int;
+
+SELECT m.member_id FROM members m WHERE m.name = name INTO memberid;
+
+IF memberid IS NULL
+THEN
+  INSERT INTO members VALUES (NULL, version_id, name, is_todo, is_missing,
+is_niex, is_fixed, fixed_in_version, todo_comment);
+  SET id = LAST_INSERT_ID();
+ELSE
+  UPDATE members m
+  SET m.is_todo = m.is_todo + is_todo, m.is_missing = m.is_missing +
+m.is_missing, m.is_niex = m.is_niex + is_niex
+  WHERE member_id = memberid;
+  SET id = memberid;
+END IF;
+END;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `moma`.`insert_or_update_member`;
+CREATE PROCEDURE  `moma`.`insert_or_update_member`(report_id int, name varchar(512),
+			is_missing bit, is_todo bit, is_niex bit, todo_comment text)
+BEGIN
+DECLARE member_id INT;
+
+SET member_id = -1;
+SELECT m.member_id FROM members m
+WHERE m.name = name
+ORDER BY version_id DESC
+LIMIT 1 INTO member_id;
+
+IF member_id = -1 THEN
+	INSERT INTO members VALUES (NULL, '0', name, is_todo, is_missing, is_niex, TRUE, '0', NULL);
+	SET member_id = LAST_INSERT_ID();
+END IF;
+INSERT INTO reports_members VALUES (report_id, member_id, 1, is_missing, is_todo, is_niex)
+ON DUPLICATE KEY UPDATE count = count + 1;
+
+END;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `moma`.`insert_or_update_pinvoke`;
+CREATE PROCEDURE  `moma`.`insert_or_update_pinvoke` (report_id int, library_name varchar(80),
+							function_name varchar(80))
+BEGIN
+
+INSERT INTO reports_pinvoke VALUES (NULL, report_id, library_name, function_name, 1)
+ON DUPLICATE KEY UPDATE count = count + 1;
+END;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `moma`.`insert_report_master`;
+CREATE PROCEDURE  `moma`.`insert_report_master`(submit_date datetime, ip varchar(16),
+				definitions TEXT,
+				reported_by TEXT,
+				email TEXT,
+				organization TEXT,
+				homepage TEXT,
+				comment text,
+				guid varchar(50),
+				out id int)
+BEGIN
+INSERT INTO reports_master VALUES
+	(NULL, submit_date, ip, definitions, reported_by, email, organization, homepage, comment, guid, 0, 0);
+SET id = LAST_INSERT_ID();
+END;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `moma`.`insert_version`;
+CREATE PROCEDURE  `moma`.`insert_version`(name varchar(25), file_date datetime, out id int)
+BEGIN
+INSERT INTO versions VALUES (NULL, name, file_date);
+SET id = LAST_INSERT_ID();
+END;
+
+@STATEMENT
+DROP PROCEDURE IF EXISTS `moma`.`init_report_counts`;
+CREATE PROCEDURE `moma`.`init_report_counts` (reportid INT)
+BEGIN
+DECLARE t_todo INT;
+DECLARE t_missing INT;
+DECLARE t_niex INT;
+DECLARE t_pinvoke INT;
+
+SELECT SUM(v.is_todo) AS 'TotalTodo', SUM(v.is_missing) AS 'TotalMissing', SUM(v.is_niex) AS 'TotalNiex'
+FROM reports_view v
+INNER JOIN reports_master m ON m.report_id = reportid
+WHERE v.report_id = reportid AND is_fixed = FALSE AND (is_todo = TRUE OR is_missing = TRUE OR is_niex = TRUE)
+INTO t_todo, t_missing, t_niex;
+
+SELECT COUNT(*)
+FROM reports_pinvoke
+WHERE report_id = reportid
+INTO t_pinvoke;
+
+IF t_todo IS NULL THEN
+	SET t_todo = 0;
+END IF;
+IF t_missing IS NULL THEN
+	SET t_missing = 0;
+END IF;
+IF t_niex IS NULL THEN
+	SET t_niex = 0;
+END IF;
+IF t_pinvoke IS NULL THEN
+	SET t_pinvoke = 0;
+END IF;
+
+INSERT INTO reports_counts VALUES (reportid, t_missing, t_todo, t_niex, t_pinvoke, t_missing + t_todo + t_niex + t_pinvoke);
+END;
+
+@STATEMENT
+DROP VIEW IF EXISTS `moma`.`reports_view`;
+CREATE SQL SECURITY INVOKER VIEW  `moma`.`reports_view` AS
+SELECT r.report_id, mem.member_id, mem.name, mem.is_todo, mem.is_missing, mem.is_niex, mem.is_fixed, r.count
+FROM members mem
+INNER JOIN reports_members r ON mem.member_id = r.member_id
+
+@STATEMENT
+
+DROP VIEW IF EXISTS `moma`.`reports_count_view`;
+CREATE SQL SECURITY INVOKER VIEW `moma`.`reports_count_view` AS
+select v.report_id as 'ReportId', m.guid, m.submit_date AS 'SubmitDate', SUM(v.is_todo) as 'TotalTodo', SUM(v.is_missing) as 'TotalMissing', SUM(v.is_niex) AS 'TotalNiex'
+from reports_view v
+INNER JOIN reports_master m ON m.report_id = v.report_id
+where is_fixed = FALSE AND (is_todo = TRUE OR is_missing = TRUE OR is_niex = TRUE)
+GROUP BY v.report_id;
+

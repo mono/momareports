@@ -1,0 +1,54 @@
+<%@ Master Language="C#" Inherits="System.Web.Mvc.ViewMasterPage" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
+    <link href="<%= Url.Content ("~/Content/Site.css") %>" rel="stylesheet" type="text/css" />
+    <asp:ContentPlaceHolder ID="CssContent" runat="server" />
+    <asp:ContentPlaceHolder ID="ScriptContent" runat="server" />
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-76510-5");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+</head>
+
+<body>
+    <div class="page">
+
+        <div id="header">
+            <div id="title">
+                <h1><a href="<%= Url.Content ("~/")%>" class="linkastext">Mono Migration Analyzer Reports</a></h1>
+                <!--<h1>Mono Migration Analyzer Reports</h1>-->
+            </div>
+            <div id="logindisplay">
+		&nbsp;
+            <%--
+                <% Html.RenderPartial("LogOnUserControl"); %>
+            --%>
+            </div> 
+            <div id="menucontainer">
+                <ul id="menu">              
+                    <li><%= Html.ActionLink ("Home", "Index", "home")%></li>
+                    <%--<li><%= Html.ActionLink ("Browse APIs", "Index", "summary")%></li>--%>
+                    <%--<li><%= Html.ActionLink ("API Search", "Index", "apis")%></li>--%>
+                    <li><%= Html.ActionLink ("Reports List", "Index", "reports")%></li>
+                    <li><%= Html.ActionLink ("API Tree", "Index", "tree")%></li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="main">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+
+            <div id="footer">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

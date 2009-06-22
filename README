@@ -1,0 +1,17 @@
+* Directory Layout
+------------------
+
+	createmomadb/
+		creates the DB tables, views and stored procedures
+
+	loadmoma/
+		loads the definition files
+
+	loadmomareport/
+		loads MoMA reports
+		
+	web/
+		web application that displays information from the DB
+
+Maintainer: gonzalo@novell.com
+
