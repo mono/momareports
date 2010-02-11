@@ -69,15 +69,10 @@ namespace Mono.Moma {
 			if (!LoadWpfExclusions ())
 				return 1;
 
-			bool xml = true;
 			foreach (string arg in args) {
-				if (arg == "--text") {
-					xml = false;
-					continue;
-				}
 				Console.WriteLine ("Loading {0}", arg);
 				try {
-					LoadReport (xml, arg);
+					LoadReport (arg);
 				} catch (Exception e) {
 					Console.Error.WriteLine ("{0} failed: {1}", arg, e.ToString ());
 				}
@@ -85,22 +80,26 @@ namespace Mono.Moma {
 			return 0;
 		}
 
-		static void LoadReport (bool xml, string filename)
+		static void LoadReport (string filename)
 		{
 			DateTime webparts_date = new DateTime (2008, 1, 1);
-			Loader loader;
-			if (xml)
-				loader =  new XmlFileLoader (filename);
-			else
-				loader =  new TextFileLoader (filename);
+			Loader loader = null;
+			try {
+				loader = new XmlFileLoader (filename);
+			} catch {
+			}
+
+			if (loader == null)
+				loader = new TextFileLoader (filename);
 
 			DataAccess da = GetDataAccess ();
 			da.BeginTransaction ();
 			try {
 				bool have_wpf;
+				int report_id;
 				using (loader) {
 					have_wpf = false;
-					int report_id = da.InsertReportMaster ( loader.ReportDate, loader.IPAddress.ToString (),
+					report_id = da.InsertReportMaster ( loader.ReportDate, loader.IPAddress.ToString (),
 										loader.Definitions, loader.UserName,
 										loader.Email, loader.Organization,
 										loader.HomePage, loader.Comments, loader.Guid);
@@ -127,13 +126,11 @@ namespace Mono.Moma {
 							}
 						}
 					}
-					da.InitReportCounts (report_id);
-					if (have_wpf)
-						da.SetWpf (report_id);
 				}
-				
-				if (da.InTransaction) // Should be true...
-					da.Commit ();
+				da.InitReportCounts (report_id);
+				if (have_wpf)
+					da.SetWpf (report_id);
+				da.Commit ();
 			} catch (Exception) {
 				if (da.InTransaction)
 					da.Rollback ();
