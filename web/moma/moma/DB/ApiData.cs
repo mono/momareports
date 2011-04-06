@@ -82,7 +82,7 @@ namespace Moma.DB
 					"	rc.totaltodo, rc.totalmissing, rc.totalniex, rc.totalpinvoke " +
 					"FROM reports_master r " +
 					"INNER JOIN reports_counts rc ON rc.report_id = r.report_id " +
-					"WHERE r.report_id IN (SELECT report_id FROM reports_members WHERE member_id = @memberid) " +
+					"INNER JOIN reports_members rm ON r.report_id = rm.report_id AND rm.member_id = @member_id " +
 					"ORDER BY submitdate DESC";
 				AddParameter (cmd, "memberid", row.MemberId);
 				adapter = GetDataAdapter(cmd);
