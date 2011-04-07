@@ -41,7 +41,8 @@ CREATE TABLE  `moma`.`reports_master` (
   `totalpinvokes` INT(11) NOT NULL,
   `haswpf` INT(1) NOT NULL,
   PRIMARY KEY (`report_id`),
-  UNIQUE KEY `idx_master_guid` (`guid`)
+  UNIQUE KEY `idx_master_guid` (`guid`),
+  KEY `idx_master_submitdate` (`submit_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 @STATEMENT
 CREATE TABLE  `moma`.`reports_members` (
@@ -88,6 +89,7 @@ CREATE TABLE `moma`.`reports_counts` (
   `TotalPInvoke` INT(11)  NOT NULL,
   `TotalProblems` int(11) NOT NULL,
   PRIMARY KEY (`report_id`),
+  KEY `idx_rc_totalprb` (`TotalProblems`),
   CONSTRAINT `fk_report_id_count` FOREIGN KEY `fk_report_id_count` (`report_id`)
     REFERENCES `reports_master` (`report_id`)
     ON DELETE CASCADE
