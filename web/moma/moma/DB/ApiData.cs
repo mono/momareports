@@ -84,7 +84,7 @@ namespace Moma.DB
 					"INNER JOIN reports_counts rc ON rc.report_id = r.report_id " +
 					"INNER JOIN reports_members rm ON r.report_id = rm.report_id AND rm.member_id = @member_id " +
 					"ORDER BY submitdate DESC";
-				AddParameter (cmd, "memberid", row.MemberId);
+				AddParameter (cmd, "member_id", row.MemberId);
 				adapter = GetDataAdapter(cmd);
 				adapter.Fill (ds, "Applications");
 			}
